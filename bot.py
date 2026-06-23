@@ -8,40 +8,45 @@ chat_id = -1002732008495
 
 client = TelegramClient("session", api_id, api_hash)
 
-async def human_pause():
-    # استراحت‌های انسانی طولانی‌تر
-    if random.random() < 0.15:  # 15% احتمال استراحت طولانی
-        long_break = random.randint(600, 1800)  # 10 تا 30 دقیقه
-        print(f"Long break: {long_break}s")
-        await asyncio.sleep(long_break)
-
 async def main():
-    await client.start()
+    # اتصال امن (مناسب GitHub Actions)
+    await client.connect()
+
+    # بررسی لاگین بودن
+    if not await client.is_user_authorized():
+        print("❌ Session not authorized. Run locally once to login.")
+        return
 
     start_time = asyncio.get_event_loop().time()
-    max_runtime = 6 * 60 * 60  # 6 ساعت
+    max_runtime = 6 * 60 * 60  # 6 hours
 
     sent_count = 0
-    daily_limit = 120  # محدودیت نرم (خیلی مهم برای safety)
+    daily_limit = 120
 
     while True:
-        # پایان 6 ساعت
+        # توقف بعد از 6 ساعت
         if asyncio.get_event_loop().time() - start_time > max_runtime:
             break
 
-        # محدودیت تعداد پیام
+        # محدودیت پیام
         if sent_count >= daily_limit:
             break
 
-        await client.send_message(chat_id, "میو")
-        sent_count += 1
+        try:
+            await client.send_message(chat_id, "میو")
+            sent_count += 1
+            print(f"Sent #{sent_count}")
 
-        # استراحت انسانی
-        await human_pause()
+        except Exception as e:
+            print("Send error:", e)
+            await asyncio.sleep(15)
+            continue
 
-        # فاصله طبیعی
-        wait_time = random.randint(300, 420)
-        await asyncio.sleep(wait_time)
+        # استراحت انسانی (مهم برای safe بودن)
+        await asyncio.sleep(random.randint(300, 420))
 
-with client:
-    client.loop.run_until_complete(main())
+    await client.disconnect()
+
+# اجرای استاندارد (جلوگیری از exit code 139)
+if name == "main":
+    asyncio.run(main())
